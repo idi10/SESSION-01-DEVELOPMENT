@@ -1,8 +1,8 @@
 pipeline {
   agent any
     options {
-        BUILDDiscarder(logRotator(numToKeepStr: '20'))
-        disableConcurrentBUILDs()
+        BuildDiscarder(logRotator(numToKeepStr: '20'))
+        disableConcurrentBuildss()
         timeout (time: 60, unit: 'MINUTES')
         timestamps()
       }
