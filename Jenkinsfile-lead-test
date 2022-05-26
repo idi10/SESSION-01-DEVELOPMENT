@@ -56,8 +56,8 @@ pipeline {
                 steps {
                     sh '''
                     sudo rm -rf $WORKSPACE/* 
-                    git clone --branch $branch https://github.com/devopseasylearning/SESSION-01-DEVELOPMENT.git
-                    cd   SESSION-01-DEVELOPMENT/
+                    git clone --branch $branch https://github.com/idi10/SESSION-01-DEVELOPMENT
+                    cd SESSION-01-DEVELOPMENT
                     '''
                 }
             }
