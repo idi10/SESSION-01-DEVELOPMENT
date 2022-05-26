@@ -1,4 +1,4 @@
-FROM node:latest
+FROM node:12.22
 MAINTAINER Devopseasylearning
 
 WORKDIR /
@@ -32,8 +32,7 @@ RUN ng build --environment=prod --output-path=./prod/dist/ -aot -vc -cc -dop --b
 RUN ng build --environment=test --output-path=./test/dist/
 RUN ng build --environment=dev --output-path=./dev/dist/
 
-
-FROM nginx:latest
+FROM nginx:1.17.10
 MAINTAINER Devopseasylearning
 
 WORKDIR /
