@@ -159,7 +159,7 @@ services:
       - yelb-network
 
   yelb-appserver:
-    image: devopseasylearning2021/idrissa:appserver
+    image: devopseasylearning2021/idrissa:appserver-${BUILD_NUMBER}
     depends_on:
       - redis-server
       - yelb-db
