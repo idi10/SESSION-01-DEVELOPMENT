@@ -100,7 +100,7 @@ stage('Login') {
      steps {
          sh '''
         cd $WORKSPACE/SESSION-01-DEVELOPMENT/yelb-appserver
-        docker build -t devopseasylearning2021/challenger:appserver-${BUILD_NUMBER} . 
+        docker build -t devopseasylearning2021/idrissa:appserver-${BUILD_NUMBER} . 
         cd -
     
                     '''
@@ -113,7 +113,7 @@ stage('Login') {
      steps {
          sh '''
         cd $WORKSPACE/SESSION-01-DEVELOPMENT/yelb-db
-        docker build -t devopseasylearning2021/challenger:yelb-db-${BUILD_NUMBER} . 
+        docker build -t devopseasylearning2021/idrissa:yelb-db-${BUILD_NUMBER} . 
         cd -
     
                     '''
@@ -126,7 +126,7 @@ stage('Login') {
      steps {
          sh '''
         cd $WORKSPACE/SESSION-01-DEVELOPMENT/yelb-ui
-        docker build -t devopseasylearning2021/challenger:yelb-ui-${BUILD_NUMBER} . 
+        docker build -t devopseasylearning2021/idrissa:yelb-ui-${BUILD_NUMBER} . 
         cd -
     
                     '''
@@ -150,7 +150,7 @@ cat <<EOF > docker-compose.yml
 version: "3.0"
 services:
   yelb-ui:
-    image: devopseasylearning2021/challenger:yelb-ui-${BUILD_NUMBER}
+    image: devopseasylearning2021/idrissa:yelb-ui-${BUILD_NUMBER}
     depends_on:
       - yelb-appserver
     ports:
@@ -159,7 +159,7 @@ services:
       - yelb-network
 
   yelb-appserver:
-    image: devopseasylearning2021/challenger:appserver
+    image: devopseasylearning2021/idrissa:appserver
     depends_on:
       - redis-server
       - yelb-db
@@ -172,7 +172,7 @@ services:
       - yelb-network
 
   yelb-db:
-    image: devopseasylearning2021/challenger:yelb-db-${BUILD_NUMBER}
+    image: devopseasylearning2021/idrissa:yelb-db-${BUILD_NUMBER}
     networks:
       - yelb-network
 
@@ -244,23 +244,23 @@ def notifyUpgrade(String buildResult, String whereAt) {
       case 'WARNING':
         slackSend(channel: channel,
                 color: "#439FE0",
-                message: "Challenger: APPLICATION AVAILABLE ON THE BROWSER FOR THE NEXT in ${env.WARNTIME} minutes @ ${env.BUILD_URL} , check console output for the IP address")
+                message: "idrissa: APPLICATION AVAILABLE ON THE BROWSER FOR THE NEXT in ${env.WARNTIME} minutes @ ${env.BUILD_URL} , check console output for the IP address")
         break
     case 'STARTING':
       slackSend(channel: channel,
                 color: "good",
-                message: "Challenger: END OF APPLCIATION AVAILABILITY")
+                message: "idrissa: END OF APPLCIATION AVAILABILITY")
       break
     default:
         slackSend(channel: channel,
                 color: "good",
-                message: "Challenger: DEPLOYMENT TEST completed successfully @ ${env.BUILD_URL}  Application CHALLENGER")
+                message: "idrissa: DEPLOYMENT TEST completed successfully @ ${env.BUILD_URL}  Application CHALLENGER")
         break
     }
   } else {
     slackSend(channel: channel,
               color: "danger",
-              message: "Challenger: DEPLOYMENT TEST was not successful. Please investigate it immediately.  @ ${env.BUILD_URL}  Application CHALLENGER")
+              message: "idrissa: DEPLOYMENT TEST was not successful. Please investigate it immediately.  @ ${env.BUILD_URL}  Application CHALLENGER")
   }
 }
 
