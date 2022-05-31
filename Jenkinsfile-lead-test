@@ -1,5 +1,6 @@
 pipeline {
-  agent any
+    agent any
+
     options {
         buildDiscarder(logRotator(numToKeepStr: '20'))
         disableConcurrentBuilds()
@@ -10,11 +11,8 @@ pipeline {
       
           environment {
 		DOCKERHUB_CREDENTIALS=credentials('dockerhub')
-	}
-     
-     
-        stages {
-    
+          }
+    stages {
         stage('Setup parameters') {
                 steps {
                     script { 
@@ -22,50 +20,27 @@ pipeline {
                             parameters([
     
                                 string(
-                                    defaultValue: 'main', 
-                                    name: 'branch', 
-                                    trim: true
-                                ),
-
-    
-                                choice(
-                                    choices: ['9090', '9091','9092', '9093','5050', '5051','7070', '7071'], 
-                                    name: 'port'
-                                ),
-				string(name: 'WARNTIME',
-                             defaultValue: '5',
-                            description: '''Warning time (in minutes) before starting upgrade'''),
-
-
-
-				string(
-                                defaultValue: 'develop',
-                                name: 'Please_leave_this_section_as_it_is',
-                                trim: true
-                            ),
-			    
+                                    defaultValue: 'dev', 
+                                    name: 'branch',
+                                ), 
                             ])
                         ])
                     }
                 }
-           } 
-        
-    
-        stage('cloning repo ') {
-              
-                steps {
-                    sh '''
-                    sudo rm -rf $WORKSPACE/* 
-                    git clone --branch $branch https://github.com/idi10/SESSION-01-DEVELOPMENT
-                    cd SESSION-01-DEVELOPMENT
-                    '''
-                }
+           }
+
+        stage('cloning') {
+            steps {
+                sh '''
+                  rm -rf $WORKSPACE/*
+                  git clone --branch $branch https://github.com/idi10/S2-E-CommerceWebsite.git
+                  cd S2-E-CommerceWebsite
+                  ''' 
             }
-    
-    
-    
-            stage('SonarQube analysis') {
-                agent {
+        } 
+        
+        stage('SonarQube analysis') {
+           agent {
                 docker {
                  
                   image 'sonarsource/sonar-scanner-cli:4.7.0'
@@ -82,188 +57,72 @@ pipeline {
                     }
                 }
             }
-    
 
+        stage("Quality gate") {
+            steps {
+                waitForQualityGate abortPipeline: true
+            }
+        }     
 
-
-stage('Login') {
+        stage('Login') {
 
 			steps {
 				sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
 			}
 		}
-
-
         
-    stage('build appserver') {
-      
-     steps {
-         sh '''
-        cd $WORKSPACE/SESSION-01-DEVELOPMENT/yelb-appserver
-        docker build -t devopseasylearning2021/idrissa:appserver-${BUILD_NUMBER} . 
-        cd -
-    
-                    '''
-                }
+        stage('building') {
+            
+            steps {
+                sh '''
+                docker build -t devopseasylearning2021/idrissa:e-commerce-${BUILD-NUMBER} .
+                cd -
+                '''
             }
-    
-    
-    stage('build yelb-db') {
-      
-     steps {
-         sh '''
-        cd $WORKSPACE/SESSION-01-DEVELOPMENT/yelb-db
-        docker build -t devopseasylearning2021/idrissa:yelb-db-${BUILD_NUMBER} . 
-        cd -
-    
-                    '''
-                }
-            }
-
-
-     stage('build yelb-ui') {
-      
-     steps {
-         sh '''
-        cd $WORKSPACE/SESSION-01-DEVELOPMENT/yelb-ui
-        docker build -t devopseasylearning2021/idrissa:yelb-ui-${BUILD_NUMBER} . 
-        cd -
-    
-                    '''
-                }
-            }
-       
-
-
-    
-          
-    
-     
-    
-    
-    stage('bring up application') {
-              
-                steps {
-sh '''
- rm -rf docker-compose.yml || true
-cat <<EOF > docker-compose.yml
-version: "3.0"
-services:
-  yelb-ui:
-    image: devopseasylearning2021/idrissa:yelb-ui-${BUILD_NUMBER}
-    depends_on:
-      - yelb-appserver
-    ports:
-      - $port:80
-    networks:
-      - yelb-network
-
-  yelb-appserver:
-    image: devopseasylearning2021/idrissa:appserver-${BUILD_NUMBER}
-    depends_on:
-      - redis-server
-      - yelb-db
-    networks:
-      - yelb-network
-
-  redis-server:
-    image: redis:4.0.2
-    networks:
-      - yelb-network
-
-  yelb-db:
-    image: devopseasylearning2021/idrissa:yelb-db-${BUILD_NUMBER}
-    networks:
-      - yelb-network
-
-
-networks:
-  yelb-network:
-    driver: bridge 
-
-EOF
-
-
-cat docker-compose.yml
-docker compose up -d 
-sleep 5
-docker-compose ps 
-IP=$(curl ifconfig.co)
-
-echo "The project is available at $IP:$port"
-
-
-'''
-                }
-            }
-
-
-
- //////////////////////////////////
-       stage('warning') {
-      steps {
-        script {
-            notifyUpgrade(currentBuild.currentResult, "WARNING")
-            sleep(time:env.WARNTIME, unit:"MINUTES")
         }
-      }
+
+        stage('deploying with docker-compose') {
+            
+            steps {
+              sh'''
+              cat <<EOF > docker-compose.yml
+              version: '3.3'
+              services:
+                  nginx:
+                  container_name: e-commerce_ik
+                  ports:
+                    - 1121:80
+                  volumes:
+                   - /home/app
+                  restart: always
+              EOF
+              docker-compose up -d
+              sleep 10
+              docker ps
+              port= 1121
+              IP addr= $(curl ifconfig.co)
+              echo "The e-commerce application is available at $IP addr:$port
+                 '''
+            }
+        }
+    }
+post {
+   
+   success {
+      slackSend (channel: '#development-alerts', color: 'good', message: "SUCCESSFUL:  Branch name  <<${env.BRANCH_NAME}>>  Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
     }
 
-
-
-
-}
-    
-        
- post {
-    always {
-      script {
-        notifyUpgrade(currentBuild.currentResult, "POST")
-      }
-    }
-    
-  }
-
-
-    
-    }
-    
-    
-    
-        
-    
-
-def notifyUpgrade(String buildResult, String whereAt) {
-  if (Please_leave_this_section_as_it_is == 'origin/develop') {
-    channel = 'development-alerts'
-  } else {
-    channel = 'development-alerts'
-  }
-  if (buildResult == "SUCCESS") {
-    switch(whereAt) {
-      case 'WARNING':
-        slackSend(channel: channel,
-                color: "#439FE0",
-                message: "idrissa: APPLICATION AVAILABLE ON THE BROWSER FOR THE NEXT in ${env.WARNTIME} minutes @ ${env.BUILD_URL} , check console output for the IP address")
-        break
-    case 'STARTING':
-      slackSend(channel: channel,
-                color: "good",
-                message: "idrissa: END OF APPLCIATION AVAILABILITY")
-      break
-    default:
-        slackSend(channel: channel,
-                color: "good",
-                message: "idrissa: DEPLOYMENT TEST completed successfully @ ${env.BUILD_URL}  Application CHALLENGER")
-        break
-    }
-  } else {
-    slackSend(channel: channel,
-              color: "danger",
-              message: "idrissa: DEPLOYMENT TEST was not successful. Please investigate it immediately.  @ ${env.BUILD_URL}  Application CHALLENGER")
-  }
-}
-
-    
  
-    
+    unstable {
+      slackSend (channel: '#development-alerts', color: 'warning', message: "UNSTABLE:  Branch name  <<${env.BRANCH_NAME}>>  Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
+    }
+
+    failure {
+      slackSend (channel: '#development-alerts', color: '#FF0000', message: "FAILURE:  Branch name  <<${env.BRANCH_NAME}>> Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
+    }
+   
+    cleanup {
+      deleteDir()
+    }
+  }
+ }
